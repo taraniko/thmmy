@@ -2,36 +2,35 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_COMMAND_SIZE 100
 
 int main(void)
 {
-    char *str = (char *)malloc(100*sizeof(char));
-    char *tok = NULL;
-    int len = 0;
-    printf("Gimme a string bitch: ");
-    fgets (str, 100*sizeof(char), stdin);
-    len = strlen(str);
-    printf("\nLength: %d\n", len);
+    char *input = (char *)malloc(MAX_COMMAND_SIZE*sizeof(char));
+    int length = 0;
+    int i = 0;
 
-    printf("string before strtok(): %s\n", str);
-    tok = strtok(str, " ");
-    while (tok) {
-        printf("Token: %s\n", tok);
-        tok = strtok(NULL, " ");
-    }
+    //Main loop
+    while(1){
 
-    printf("Print mangled string after strtok()\n");
-    int i;
-    printf("New LENGTH = %d\n\n",len);
-    for (i = 0; i < len; i++) {
-        if (str[i] == '\0') {
-            printf("\n");
-        } else {
-            printf("%c", str[i]);
-        }
+    	system("clear");
+    	printf("OStaskShell:~$ ");
+    	fgets (input, MAX_COMMAND_SIZE * sizeof(char) , stdin);
+    	length = strlen(input);
+
+    	for (i = 0; i < length; i++) {
+    		if (input[i] == ' ') {
+    			printf("\n");
+    		}
+    		else{
+    			printf("%c", input[i]);
+    		}
+    	}
+
+
     }
-    printf("\n");
-    free(str);
+    free(input);
+
 
     return 0;
 }
