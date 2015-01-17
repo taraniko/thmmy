@@ -25,11 +25,12 @@ int main(void)
     	token_length[i] = 0;
     }
 
+    system("clear");
 
     //Main loop
     while(1){
 
-    	system("clear");
+
     	printf("OStaskShell:~$ ");
 
     	fgets (input, MAX_COMMAND_SIZE * sizeof(char) , stdin);
@@ -44,7 +45,7 @@ int main(void)
     	for (i = 0; i < length; i++) {
     		if (current_token_num>4){
     			printf("\nOvernumbered parameters, only 4 where stored\n");
-    			error=1;
+
     			break;
     			//current_token_num = 4;
     			//found_space = 1;
