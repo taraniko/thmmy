@@ -1,13 +1,35 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
+
 
 #define MAX_COMMAND_SIZE 100
 #define MAX_TOKEN_SIZE 20
 #define MAX_PARSED_TOKENS 5
 
+//void sig_handler(int signo)
+//{
+//  if (signo == SIGINT)
+//    printf("User asked for termination.\n");
+//  	printf("The shell is now terminating...\n\n\n");
+//  	exit(0);
+//}
+
+void  INThandler(int sig)
+{
+
+     signal(sig, SIG_IGN);
+     printf("\n\nUser asked for termination.\n");
+     printf("The shell is now terminating...\n\n\n");
+     exit(0);
+}
+
+
 int main(void)
 {
+	signal(SIGINT, INThandler);
     char *input = (char *)malloc(MAX_COMMAND_SIZE*sizeof(char));
     char *token[MAX_PARSED_TOKENS];
     int token_length[5];
@@ -19,11 +41,7 @@ int main(void)
     int active_tokens;
     int error = 0;
 
-    //tokens initialization
-    for (i=0; i<MAX_PARSED_TOKENS; i++){
-    	token[i] = (char*) malloc(MAX_TOKEN_SIZE);
-    	token_length[i] = 0;
-    }
+
 
     system("clear");
 
@@ -35,6 +53,12 @@ int main(void)
 
     	fgets (input, MAX_COMMAND_SIZE * sizeof(char) , stdin);
     	length = strlen(input);
+
+        //tokens initialization
+        for (i=0; i<MAX_PARSED_TOKENS; i++){
+        	token[i] = (char*) malloc(MAX_TOKEN_SIZE);
+        	token_length[i] = 0;
+        }
 
     	//TODO add support for & symbol
 
@@ -67,21 +91,22 @@ int main(void)
     	token_length[current_token_num]--;
 
     	active_tokens = 0;
-//    	for(i=0; i<MAX_PARSED_TOKENS; i++){
-//    		token[i][token_length[i]] = '\0';
-//    		if (token_length[i] != 0){
-//    			active_tokens++;
-//    		}
-//    	}
+    	for(i=0; i<MAX_PARSED_TOKENS; i++){
+    		if (token_length[i] != 0){
+    			active_tokens++;
+    			token[i][token_length[i]] = NULL;
+    			token_length[i]++;
+    		}
+    	}
 
 
 
-//    	printf("\n\nActive tokens: %d", active_tokens);
-//
-//    	for( i=0; i<MAX_PARSED_TOKENS; i++){
-//    		printf("\nToken[%d] = %s",i,token[i]);
-//    	}
-//
+    	printf("\n\nActive tokens: %d", active_tokens);
+
+    	for( i=0; i<active_tokens; i++){
+    		printf("\nToken[%d] = %s",i,token[i]);
+    	}
+
     	for( i=0; i<MAX_PARSED_TOKENS; i++){
     	    printf("\nToken[%d] length = %d",i,token_length[i]);
     	}
