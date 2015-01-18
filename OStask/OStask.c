@@ -9,15 +9,11 @@
 #define MAX_TOKEN_SIZE 50
 #define MAX_PARSED_TOKENS 5
 
-static pid_t pid;
+//static pid_t pid;
 
-//void sig_handler(int signo)
-//{
-//  if (signo == SIGINT)
-//    printf("User asked for termination.\n");
-//  	printf("The shell is now terminating...\n\n\n");
-//  	exit(0);
-//}
+//TODO fix ls & instead of ls&  ISSUE
+
+
 
 
 void  INThandler(int sig)
@@ -51,11 +47,13 @@ int cd(char *pth){
 
 void  execute(char **argv, int background)
 {
-     //pid_t  pid;
+     pid_t  pid;
 
-	//TODO Fix Child dead issue
 
      int    status;
+
+     printf("\nToken[0] = %s\n", argv[0]);
+     printf("Token[1] = %s\n", argv[1]);
 
      if ((pid = fork()) < 0) {     /* fork a child process           */
           printf("*** ERROR: forking child process failed\n");
@@ -66,6 +64,7 @@ void  execute(char **argv, int background)
                printf("*** ERROR: exec failed\n");
                exit(1);
           }
+          exit(0);
      }
      else {                                  /* for the parent:      */
     	 if(background){
@@ -155,7 +154,9 @@ int main(void)
     	}
     	token[active_tokens] = (char *)0;
 
-
+        printf("\nToken[0] = %s\n", token[0]);
+        printf("Token[1] = %s\n", token[1]);
+        printf("Token[1] length = %d", token_length[1]);
 
 //    	printf("\n\nActive tokens: %d", active_tokens);
 //
@@ -183,7 +184,9 @@ int main(void)
     	else{
     		//TODO & MUST BE REMOVED
     		if(token[active_tokens-1][token_length[active_tokens-1]-2] == '&'){
-    			token[active_tokens-1][token_length[active_tokens-1]-2] = NULL;
+    			printf("Mphka\n");
+    			token[active_tokens-1][token_length[active_tokens-1]-2] = '\0';
+    			printf("KAi to allaksa\n");
     			execute(token,1); //1 to execute in background
     		}
     		else{
