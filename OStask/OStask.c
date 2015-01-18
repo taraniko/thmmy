@@ -1,25 +1,12 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-#include <sys/wait.h>
-
-
-#define MAX_COMMAND_SIZE 100
-#define MAX_TOKEN_SIZE 50
-#define MAX_PARSED_TOKENS 5
-#define BACKGROUND 1
-#define FOREGROUND 0
+#include "OStask.h"
 
 
 
-void  INThandler(int sig)
-{
+void  INThandler(int sig){
 
      signal(sig, SIG_IGN);
-     printf("\n\nUser asked for termination.\n");
-     printf("The shell is now terminating...\n\n\n");
+
+     printf("\n\nShell will now terminate.\n\n");
      exit(0);
 }
 
@@ -43,25 +30,25 @@ int cd(char *pth){
   }
 
 
-void execute(char **argv, int method)
-{
+void execute(char **argv, int method){
+
      pid_t  pid;
      int    status;
 
      if ((pid = fork()) < 0) {     /* fork a child process           */
-          printf("*** ERROR: Forking child process failed\n");
+          printf("\n*** ERROR: Forking child process failed\n");
           exit(1);
      }
      else if (pid == 0) {          /* for the child process:         */
           if (execvp(*argv, argv) < 0) {     /* execute the command  */
-               printf("*** ERROR: Command not found or execution failed\n");
+               printf("\n*** ERROR: Command not found or execution failed\n");
                exit(1);
           }
           exit(0);
      }
      else {                                  /* for the parent:      */
     	 if(method == BACKGROUND){
-    		 printf("\nProcess with pid [%d] started.",pid);
+    		 printf("\nProcess with pid [%d] started.\n",pid);
     	 }
     	 else{
           while (wait(&status) != pid);       /* wait for completion  */
@@ -146,7 +133,7 @@ int main(void)
     	if (!strcmp(token[0],"cd")){
     		cd_result = cd(token[1]);
     		if (cd_result == -1){
-    			printf("*** ERROR: Cannot change to that directory\n");
+    			printf("\n*** ERROR: Cannot change to that directory\n");
     		}
     	}
 
@@ -170,14 +157,7 @@ int main(void)
     		}
     	}
 
-
-
-    	//
-
     	printf("\n");
     }
-    free(input);
-
-
     return 0;
 }
