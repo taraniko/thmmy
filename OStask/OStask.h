@@ -2,7 +2,7 @@
  * OStask.h
  *
  *
- * Author: Taras Nick
+ * Author: Taras Nikos
  */
 
 #ifndef OSTASK_H_
@@ -21,6 +21,11 @@
 #define BACKGROUND 1
 #define FOREGROUND 0
 
+/**
+@brief Handles the SIGINT signal caused by Ctrl-C combination
+@details The function prints a message before terminating the shell.
+@param sig [int] : The signal number
+**/
 void  INThandler(int sig);
 
 int cd(char *pth);
