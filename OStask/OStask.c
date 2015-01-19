@@ -56,35 +56,46 @@ void execute(char **argv, int method){
      }
 }
 
+/**
+* @brief Implements the endless loop of the shell.
+*
+* @details  The function has a main loop which prints the shell prompt and waits
+* for a command input by the user. In the loop, the command is parsed into tokens by using
+* space as the seperating character. Then, the appropriate function is called to run this
+* command. If the & symbol is found in the last token, main() informs the execute() function
+* that the command has to be executed in the background.
+*
+**/
 
 int main(void)
 {
-	signal(SIGINT, INThandler);
+	signal(SIGINT, INThandler);  //Needed for the signal handler function
 
-    char *input = (char *)malloc(MAX_COMMAND_SIZE*sizeof(char));
-    char *token[MAX_PARSED_TOKENS];
-    char cwd[256];
+    char *input = (char *)malloc(MAX_COMMAND_SIZE*sizeof(char)); //user input
+    char *token[MAX_PARSED_TOKENS]; //array of strings which holds the parsed tokens
+    char cwd[256]; //current working directory
 
-    int token_length[5];
-    int i;
-    int length = 0;
-    int current_token_num;
-    int char_count;
-    int found_space;
-    int active_tokens;
-    int cd_result;
+    int token_length[5]; //holds the length of each of the 5 tokens
+    int i;	//used for counting in "for" loops or indexing in arrays
+    int length = 0;	//Holds the length of the user input
+    int current_token_num; //Holds the index of the token being processed
+    int char_count; //holds the index of the token character being processed
+    int found_space;  //flag, true when a space is found. Used to find more than one spaces
+    int active_tokens;  //holds how many of the 5 tokens have non-zero length
+    int cd_result; //  holds the result (success or not) of the "cd" function
+
+//TODO add Tab support in spaces removal
 
 
-    system("clear");
+    system("clear");  //Clears screen for the new shell to start
 
-    //Main loop
-    while(1){
+    while(1){  //Here starts the main loop
 
-    	getcwd(cwd,sizeof(cwd));
-    	printf("OStaskShell:%s$ ", cwd );
+    	getcwd(cwd,sizeof(cwd));  //Gets current working directory
+    	printf("OStaskShell:%s$ ", cwd );  //Prints shell prompt
 
-    	fgets (input, MAX_COMMAND_SIZE * sizeof(char) , stdin);
-    	length = strlen(input);
+    	fgets (input, MAX_COMMAND_SIZE * sizeof(char) , stdin); //Reads user input
+    	length = strlen(input); //Gets the length of the user input
 
         //tokens initialization
         for (i=0; i<MAX_PARSED_TOKENS; i++){
@@ -97,7 +108,7 @@ int main(void)
     	current_token_num = 0;
     	char_count = 0;
     	for (i = 0; i < length; i++) {
-    		if (current_token_num>4){
+    		if (current_token_num>4){  //if user entered more than 4 parameters, only 4 are stored
     			printf("\n*** ERROR: Overnumbered parameters, only 4 where stored\n");
     			break;
     		}
@@ -129,7 +140,7 @@ int main(void)
     	token[active_tokens] = (char *)0;
 
 
-    	// check if command is "cd"
+    	// check if command is "cd" and run it
     	if (!strcmp(token[0],"cd")){
     		cd_result = cd(token[1]);
     		if (cd_result == -1){
@@ -137,7 +148,7 @@ int main(void)
     		}
     	}
 
-    	// check if command is exit
+    	// check if command is exit and run it
     	else if (!strcmp(token[0],"exit")){
     		exit(0);
     	}
