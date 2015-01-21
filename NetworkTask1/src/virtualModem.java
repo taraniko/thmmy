@@ -7,15 +7,21 @@
  * Java virtual modem communications seed code
  *
  */
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import ithakimodem.*;
 
 public class virtualModem {
-	private static final String ECHO_REQUEST_CODE = "4169";
-	private static final String IMAGE_REQUEST_CODE = "3193";
+	//TODO Add exception catches to Reads
+	private static final String ECHO_REQUEST_CODE = "6291";
+	private static final String IMAGE_REQUEST_CODE = "2303";
 	private static final String IMAGE_REQUEST_CODE_E = "3109";
 	private static final String GPS_REQUEST_CODE = "6522";
 	private static final String ACK_RESULT_CODE = "8180";
 	private static final String NACK_RESULT_CODE = "0775";
+	
 	private long time;
 	private String sendMessage = ""; // sending message
 	String rcvMessage = ""; // received message
@@ -27,14 +33,54 @@ public class virtualModem {
 		(new virtualModem()).rx();
 	}
 
-	public void echoRequest(Modem tempModem) {
-		byte[] b; // character to send
-		sendMessage = "ATE" + ECHO_REQUEST_CODE + "\r";
+	public void request(char letter, String code, Modem modem) {
+		byte[] b; // characters to send
+		sendMessage = letter + code + "\r";
 		b = sendMessage.getBytes();
-		for (int i = 0; i < sendMessage.length(); i++) {
-			tempModem.write(b);
-		}
+		modem.write(b);
 	}
+	
+	public boolean rcvImage(Modem modem){
+		
+		int k; //received char
+		int previous; //previous char
+		FileOutputStream image;
+		
+		try {
+			image = new FileOutputStream("image.jpeg");
+		} catch (FileNotFoundException e) {
+			System.out.println("Impossible to open file.");
+			return false;
+		}
+		
+		
+		previous = 0;
+		for(;;){
+			k = modem.read();
+			try {
+				image.write(k);
+			} catch (IOException e) {
+				System.out.println("Impossible to write data to file");
+				return false;
+			}
+			if(previous==0xFF && k==0xD9){
+				System.out.println("Image complete!");
+				break;
+			}
+			previous = k;
+		}
+		
+		try {
+			image.close();
+		} catch (IOException e) {
+			System.out.println("Impossible to close file");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	
 
 	public boolean foundSequence(String seq) {
 		//drop out first buffer char if buffer is full
@@ -102,6 +148,7 @@ public class virtualModem {
 							}
 							System.out.print((char) k);
 							rcvMessage += k;
+							
 							if (countLF == 3) { // found the end of the reading stream
 								foundCR = false;
 								countLF = 0;
@@ -121,10 +168,28 @@ public class virtualModem {
 					return true;
 	}
 
+	public boolean readIntro(Modem modem){
+		char k = ' '; // received character
+		rcvMessage = "";
+					while(!rcvMessage.endsWith("\r\n\n\n")) {
+						try {
+							// Read a char from the modem
+							k = (char) modem.read();
+							if (k == -1)
+								break;
+							rcvMessage += k;
+						} catch (Exception x) {
+							break;
+						}
+					}
+					if (k == (int) -1) {
+						return false; //failed to read
+					} // reading loop
+					System.out.println("Intro finished!");
+					return true;	
+	}
 	public void rx() {
-
-
-
+		
 		Modem modem;
 		
 		modem = new Modem();
@@ -133,13 +198,16 @@ public class virtualModem {
 		modem.open("ithaki");
 		//TODO zero buffer
 		
-		readGreeting(modem);
+		readIntro(modem);
+		//ECHO REQUEST
 		for(int i=0; i<100; i++){
-			echoRequest(modem); // send an echo request to the modem
-			time = System.currentTimeMillis();
+			request('E',ECHO_REQUEST_CODE,modem); // send an echo request to the modem
+			time = System.currentTimeMillis();  //holds time after sending Echo request
 			rcvMessage = recvEchoPacket(modem);
 		}
-		System.out.println("\n");
+		//JPEG REQUEST (no errors)
+		request('M',IMAGE_REQUEST_CODE,modem);
+		rcvImage(modem);
 		modem.close();
 
 	}
