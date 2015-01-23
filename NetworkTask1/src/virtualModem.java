@@ -15,18 +15,26 @@ import ithakimodem.*;
 
 public class virtualModem {
 	// TODO Add exception catches to Reads
-	private static final String ECHO_REQUEST_CODE = "E7882";
-	private static final String IMAGE_REQUEST_CODE = "M2428";
-	private static final String IMAGE_REQUEST_CODE_E = "G6558";
-	private static final String GPS_REQUEST_CODE = "P9448";
-	private static final String ACK_RESULT_CODE = "8180";
-	private static final String NACK_RESULT_CODE = "0775";
+	private static final String ECHO_REQUEST_CODE = "E4403";
+	private static final String IMAGE_REQUEST_CODE = "M4466";
+	private static final String IMAGE_REQUEST_CODE_E = "G5012";
+	private static final String GPS_REQUEST_CODE = "P2229";
+	private static final String ACK_RESULT_CODE = "Q6241";
+	private static final String NACK_RESULT_CODE = "R7473";
 
 	private long time;
 	private String sendMessage = ""; // sending message
 	String rcvMessage = ""; // received message
 	private String buffer = ""; // buffer for prototype recognizing
 	private int bufferSize = 0;
+	private String width[];
+	private String length[];
+	private int parameters = 0;
+	
+	public virtualModem(){
+		width = new String[100];
+		length = new String[100];
+	}
 
 	public static void main(String[] param) throws IOException {
 		(new virtualModem()).rx();
@@ -193,18 +201,80 @@ public class virtualModem {
 
 	public boolean readGPS(Modem modem) {
 		char k; // received character
+		int MAX_SECONDS = 10;
+		int counter = MAX_SECONDS;
+		rcvMessage = "";
 		for (;;) {
 			k = (char) modem.read();
 			if (k == -1) {
 				System.out.println("Read GPS failed. -1");
 				return false;
 			}
-			System.out.print(k);
-			if(k == -1) break; //must be deleted
+			//Code if character received
+			rcvMessage += k;
+			if (rcvMessage.endsWith("START ITHAKI GPS TRACKING\r\n")){
+				System.out.println("\nStarted GPS reception\n");
+				rcvMessage = "";
+			}
+			if (rcvMessage.endsWith("STOP ITHAKI GPS TRACKING\r\n")){
+				System.out.println("\nStopped GPS reception\n");
+				System.out.println("Found "+parameters+" coordinates");
+				rcvMessage = "";
+				break;
+			}
+			if (rcvMessage.endsWith("\r\n")){ //found GPS line
+				if(counter == MAX_SECONDS){  //MAX_SECONDS time passed
+					getGPSparameters();
+					System.out.println("Got one signal\n");
+					counter = 0;
+				}
+				else{
+					counter++;
+				}
+				rcvMessage = "";
+			}
 		}
-
 		return true;
 	}
+	
+	void getGPSparameters(){
+		int i; //used for counting
+		width[parameters] = rcvMessage.substring(18,27);
+		length[parameters] = rcvMessage.substring(31,40); //I ommit the first zero
+		parameters++; //new GPS coordinates received;
+	}
+	
+	String decToDegrees(String coord){
+		String degrees = "";
+		int dec;
+		float converted;
+		degrees += coord.substring(0,4);
+		dec = Integer.parseInt( coord.substring(5) );
+		converted = dec * 6 / 1000;
+		converted = Math.round(converted);
+		
+		if (converted<10){
+			degrees+=0;
+		}
+		degrees += (int)converted;
+		return degrees;
+	}
+	
+	void getGPSimage(Modem modem) throws IOException{
+		sendMessage = GPS_REQUEST_CODE;
+		for(int i=0; i<parameters; i++){
+			sendMessage += "T=";
+			sendMessage += decToDegrees(length[i]);
+			sendMessage += decToDegrees(width[i]);
+		}
+		request(sendMessage,modem);
+		rcvImage("image_GPS.jpeg",modem);
+	}
+	
+	void errorCorrection(Modem modem){
+		request(ACK_RESULT_CODE,modem);
+	}
+	
 
 	public void rx() throws IOException {
 
@@ -217,20 +287,23 @@ public class virtualModem {
 		// TODO zero buffer
 
 		readIntro(modem);
-		// ECHO REQUEST
-		 for(int i=0; i<100; i++){
+			// ECHO REQUEST
+		 for(int i=0; i<10; i++){
 		 request(ECHO_REQUEST_CODE,modem); // send an echo request to the modem
 		 time = System.currentTimeMillis(); //holds time after sending Echo
-		// request
+		 	// request
 		 rcvMessage = recvEchoPacket(modem);
 		 }
-		// JPEG REQUEST (no errors)
-		 request(IMAGE_REQUEST_CODE,modem);
-		 rcvImage("image_no_errors.jpeg",modem);
-		 request(IMAGE_REQUEST_CODE_E, modem);
-		 rcvImage("image_with_errors.jpeg", modem);
-		request(GPS_REQUEST_CODE, modem);
-		readGPS(modem);
+		 	// JPEG REQUEST (no errors)
+		 //request(IMAGE_REQUEST_CODE,modem);
+		 //rcvImage("image_no_errors.jpeg",modem);
+		 //request(IMAGE_REQUEST_CODE_E, modem);
+		 //rcvImage("image_with_errors.jpeg", modem);
+		 //request(GPS_REQUEST_CODE+"R=1000140", modem);
+		 //request("R=1000102",modem);
+		 //readGPS(modem);
+		 //getGPSimage(modem);
+		 
 		modem.close();
 
 	}
