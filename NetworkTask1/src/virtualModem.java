@@ -17,12 +17,12 @@ import ithakimodem.*;
 
 public class virtualModem {
 	// TODO Add exception catches to Reads
-	private static final String ECHO_REQUEST_CODE = "E2563";
-	private static final String IMAGE_REQUEST_CODE = "M0825";
-	private static final String IMAGE_REQUEST_CODE_E = "G7479";
-	private static final String GPS_REQUEST_CODE = "P2513";
-	private static final String ACK_RESULT_CODE = "Q7023";
-	private static final String NACK_RESULT_CODE = "R7137";
+	private static final String ECHO_REQUEST_CODE = "E7003";
+	private static final String IMAGE_REQUEST_CODE = "M2754";
+	private static final String IMAGE_REQUEST_CODE_E = "G6336";
+	private static final String GPS_REQUEST_CODE = "P1478";
+	private static final String ACK_RESULT_CODE = "Q9101";
+	private static final String NACK_RESULT_CODE = "R5976";
 
 	private long time;
 	private String sendMessage = ""; // sending message
@@ -65,7 +65,7 @@ public class virtualModem {
 		}
 
 		previous = 0;
-		System.out.println("Starting image download!");
+		System.out.println("Starting image (" + imageName + ") download!");
 		for (;;) {
 			try {
 				k = modem.read();
@@ -117,9 +117,7 @@ public class virtualModem {
 		while (!foundSequence("PSTART")) {
 			k = (char) modem.read();
 			buffer += k;
-			// TODO add timeout
 		}
-		// if timed out return a bad string
 		// else (found PSTART)
 		buffer = "";
 		rcvMessage = "PSTART";
@@ -301,7 +299,7 @@ public class virtualModem {
 				System.out.println("NACK sent");
 				request(NACK_RESULT_CODE, modem);
 			}
-			rcvMessage ="";
+			rcvMessage = "";
 		}
 		noErrorPackets++;
 		System.out.println("Received NO_ERRORS packet");
@@ -335,6 +333,23 @@ public class virtualModem {
 			return true; // found error
 	}
 
+	
+	public void saveCodesToFile(){
+		
+	}
+	
+	public void simplePacketRequest(Modem modem) {
+		readIntro(modem);
+		// ECHO REQUEST
+		for (int i = 0; i < 10; i++) {
+			request(ECHO_REQUEST_CODE, modem); // send an echo request to the
+												// modem
+			time = System.currentTimeMillis(); // holds time after sending Echo
+			// request
+			rcvMessage = recvEchoPacket(modem);
+		}
+	}
+
 	// TODO add try catch on modem.read() everywhere
 	public void rx() throws IOException {
 
@@ -344,33 +359,23 @@ public class virtualModem {
 		modem.setSpeed(80000);
 		modem.setTimeout(2000);
 		modem.open("ithaki");
-			// TODO zero buffer
 
-		readIntro(modem);
-			// ECHO REQUEST
-		for (int i = 0; i < 10; i++) {
-			request(ECHO_REQUEST_CODE, modem); // send an echo request to the
-												// modem
-			time = System.currentTimeMillis(); // holds time after sending Echo
-			// request
-			rcvMessage = recvEchoPacket(modem);
-		}
-			//JPEG REQUEST (no errors)
-		request(IMAGE_REQUEST_CODE,modem);
-		rcvImage("image_no_errors.jpeg",modem);
+		// JPEG REQUEST (no errors)
+		request(IMAGE_REQUEST_CODE, modem);
+		rcvImage("image_no_errors.jpeg", modem);
 		request(IMAGE_REQUEST_CODE_E, modem);
 		rcvImage("image_with_errors.jpeg", modem);
-		request(GPS_REQUEST_CODE+"R=1000199", modem);
-		request("R=1000102",modem);
+		request(GPS_REQUEST_CODE + "R=1000140", modem);
+		request("R=1000102", modem);
 		readGPS(modem);
 		getGPSimage(modem);
 		for (int i = 0; i < 1000; i++) {
 			errorCorrection(modem);
 		}
-		System.out.println("Errors: "+errorPackets);
-		System.out.println("Corrects: "+(noErrorPackets-errorPackets));
-		
-		//TODO run only 4 functions in main
+		System.out.println("Errors: " + errorPackets);
+		System.out.println("Corrects: " + (noErrorPackets - errorPackets));
+
+		// TODO run only 4 functions in main
 		modem.close();
 
 	}
