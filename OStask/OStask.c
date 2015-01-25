@@ -12,6 +12,7 @@ void  INThandler(int sig){
 
 
 
+
 int cd(char *pth){
 
 	int result;
@@ -84,7 +85,7 @@ int main(void)
     int active_tokens;  //holds how many of the 5 tokens have non-zero length
     int cd_result; //  holds the result (success or not) of the "cd" function
 
-//TODO add Tab support in spaces removal
+
 
 
     system("clear");  //Clears screen for the new shell to start
