@@ -19,32 +19,31 @@ public class virtualModem {
 	
 	Modem modem;
 	// TODO Add exception catches to Reads
-	private static final String ECHO_REQUEST_CODE = "E7274";
-	private static final String IMAGE_REQUEST_CODE = "M9670";
-	private static final String IMAGE_REQUEST_CODE_E = "G0604";
-	private static final String GPS_REQUEST_CODE = "P8653";
-	private static final String ACK_RESULT_CODE = "Q5394";
-	private static final String NACK_RESULT_CODE = "R1135";
+	private static final String ECHO_REQUEST_CODE = "E9844";
+	private static final String IMAGE_REQUEST_CODE = "M1383";
+	private static final String IMAGE_REQUEST_CODE_E = "G7661";
+	private static final String GPS_REQUEST_CODE = "P9184";
+	private static final String ACK_RESULT_CODE = "Q8724";
+	private static final String NACK_RESULT_CODE = "R6860";
 	
-	private String sendMessage = ""; // sending message
+	private String sendMessage = ""; // message to be sent
 	String rcvMessage = ""; // received message
 	private String buffer = ""; // buffer for prototype recognizing
-	private int bufferSize = 0;
-	private String width[];
-	private String length[];
-	private int parameters = 0;
+	private String width[]; // GPS coordinates array, width
+	private String length[]; //GPS coordinates array, length
+	private int parameters = 0; //how many GPS coordinates I received
 	private int errorPackets = 0;
 	private int noErrorPackets = 0;
 
-	virtualModem() {
+	virtualModem() { //constructor
 		//Init Modem
 		modem = new Modem();
-		modem.setSpeed(80000);
+		modem.setSpeed(80000);  
 		modem.setTimeout(2000);
 		modem.open("ithaki");
 		
-		width = new String[100];
-		length = new String[100];
+		width = new String[100]; //init width array
+		length = new String[100]; //init length array
 	}
 	
 
@@ -52,6 +51,7 @@ public class virtualModem {
 		(new virtualModem()).rx();
 	}
 
+	//this function sends a command to the virtual modem
 	public void request(String code) {
 		byte[] b; // characters to send
 		sendMessage = code + "\r";
@@ -59,6 +59,7 @@ public class virtualModem {
 		modem.write(b);
 	}
 
+	//This function receives an image and saves it in the path "imageName"
 	public boolean rcvImage(String imageName) throws IOException {
 
 		int k; // received char
@@ -105,6 +106,7 @@ public class virtualModem {
 		return true;
 	}
 
+	//This function finds a sequence in the buffer
 	public boolean foundSequence(String seq) {
 		// drop out first buffer char if buffer is full
 		if (buffer.length() > seq.length()) {
@@ -117,6 +119,7 @@ public class virtualModem {
 		}
 	}
 
+	//This function receives a simple packet
 	public void recvEchoPacket(int timeout) {
 		char k; // received character
 		long time;
@@ -142,14 +145,12 @@ public class virtualModem {
 			k = (char) modem.read();
 			buffer += k;
 			rcvMessage += k;
-			// TODO add timeout
 		}
-		// if timed out return a bad string
 		// else (FOUND PSTOP)
 		return;
 	}
 
-
+	//This function reads the introduction message and informs the user if succeeded.
 	public boolean readIntro() {
 		char k = ' '; // received character
 		rcvMessage = "";
@@ -171,9 +172,10 @@ public class virtualModem {
 		return true;
 	}
 
+	//This function receives necessary GPS packets
 	public boolean readGPS() {
 		char k; // received character
-		int MAX_SECONDS = 10;
+		int MAX_SECONDS = 10;  //Every MAX_SECONDS seconds, coordinates will be saved. 
 		int counter = MAX_SECONDS;
 		rcvMessage = "";
 		for (;;) {
@@ -197,7 +199,7 @@ public class virtualModem {
 			if (rcvMessage.endsWith("\r\n")) { // found GPS line
 				if (counter == MAX_SECONDS) { // MAX_SECONDS time passed
 					getGPSparameters();
-					//Got one GPS parameter
+					//Got one GPS set of coordinates
 					counter = 0;
 				} else {
 					counter++;
@@ -208,6 +210,7 @@ public class virtualModem {
 		return true;
 	}
 
+	//Parses GPS coordinates from a received GPS packet
 	void getGPSparameters() {
 		width[parameters] = rcvMessage.substring(18, 27);
 		length[parameters] = rcvMessage.substring(31, 40); // I ommit the first
@@ -215,6 +218,7 @@ public class virtualModem {
 		parameters++; // new GPS coordinates received;
 	}
 
+	//Converts decadic minutes to minutes and seconds
 	String decToDegrees(String coord) {
 		String degrees = "";
 		int dec;
@@ -231,6 +235,7 @@ public class virtualModem {
 		return degrees;
 	}
 
+	//Requests and receives GPS image (marked coordinates) 
 	void getGPSimage(String imageName) throws IOException {
 		sendMessage = GPS_REQUEST_CODE;
 		for (int i = 0; i < parameters; i++) {
@@ -242,6 +247,7 @@ public class virtualModem {
 		rcvImage(imageName);
 	}
 
+	//Returns the number of packet resends, until the ARQ packet is correct
 	public int errorCorrection() {
 		int resends=0;
 		char k;
@@ -274,6 +280,7 @@ public class virtualModem {
 		return resends;
 	}
 
+	//Returns if the received ARQ packet has an error
 	public boolean errorDetect() {
 		int startPacket, endPacket;
 		byte packetBytes[] = new byte[20];
@@ -300,7 +307,7 @@ public class virtualModem {
 			return true; // found error
 	}
 
-	
+	//Saves current Virtual Lab Codes in a text file for future use. 
 	public void saveCodesToFile(String codesFileName) throws IOException{
 		
 		FileOutputStream codesFile;
@@ -327,6 +334,7 @@ public class virtualModem {
 		System.out.println("Wrote codes in a file ("+codesFileName+")");
 	}
 	
+	//Implements the simple packet reception for "sessionTime" seconds and saves results to "filename" file.
 	public void simplePacketRequest(int sessionTime, String filename) throws IOException {
 		long packetNumber = 0;
 		long seconds;
@@ -364,6 +372,7 @@ public class virtualModem {
 		file.close();
 	}
 	
+	//Receives no_error and error images
 	public void receiveImages(String imageNoErrors, String imageErrors) throws IOException{
 		// JPEG REQUEST (no errors)
 		request(IMAGE_REQUEST_CODE);
@@ -372,12 +381,15 @@ public class virtualModem {
 		rcvImage(imageErrors);
 	}
 	
+	//Receives GPS image 
 	public void receiveGPS(String imageName) throws IOException{
-		request(GPS_REQUEST_CODE + "R=1000140");
+		request(GPS_REQUEST_CODE + "R=1000140"); //40 packets are received, every 10 seconds the coordinates
+												 //are saved. So we have 4 GPS marks on the image.
 		readGPS();
 		getGPSimage(imageName);
 	}
 	
+	//Implements the ARQ Packet reception for "sessionTime" seconds and saves results to "filename" file.
 	public void ARQpacketRequest(int sessionTime, String filename) throws IOException{
 		
 		long packetNumber = 0;
@@ -389,7 +401,7 @@ public class virtualModem {
 		
 		sendMessage = "Packet,Time(ms),Resends\r\n";
 		file.write(sendMessage.getBytes());
-		System.out.println("Started receiving ARQ packets.");
+		System.out.println("Started receiving ARQ packets for "+sessionTime+" seconds.");
 		long temp = System.currentTimeMillis();
 		while (seconds < sessionTime) {
 			packetNumber++;
@@ -405,13 +417,14 @@ public class virtualModem {
 		file.close();
 	}
 
+	//This is the "main" function that calls all necessary functions
 	public void rx() throws IOException {
 
 		saveCodesToFile("codes.txt");
-		simplePacketRequest(5*60,"simple_packets.txt");
+		simplePacketRequest(5*60,"simple_packets.txt"); //sessionTime 5 minutes
 		receiveImages("image_no_errors.jpeg","image_with_errors.jpeg");
 		receiveGPS("image_GPS.jpeg");
-		ARQpacketRequest(5*60,"ARQ_packets.txt");
+		ARQpacketRequest(5*60,"ARQ_packets.txt"); //sessionTime 5 minutes
 
 		modem.close();
 
