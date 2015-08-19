@@ -1,12 +1,11 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "math.h"
-
-#ifdef CILK
-#include <cilk/cilk.h>
-#endif
+#include <omp.h>
 
 #define DIM 3
+
+
 
 inline unsigned long int splitBy3(unsigned int a){
     unsigned long int x = a & 0x1fffff; // we only look at the first 21 bits
@@ -26,12 +25,10 @@ inline unsigned long int mortonEncode_magicbits(unsigned int x, unsigned int y, 
 
 /* The function that transform the morton codes into hash codes */ 
 void morton_encoding(unsigned long int *mcodes, unsigned int *codes, int N, int max_level){
-  
-#ifdef CILK
-  cilk_for(int i=0; i<N; i++){
-#else
+  omp_set_dynamic(0);
+  omp_set_num_threads(2);
+  #pragma omp parallel for 
   for(int i=0; i<N; i++){
-#endif
     // Compute the morton codes from the hash codes using the magicbits mathod
     mcodes[i] = mortonEncode_magicbits(codes[i*DIM], codes[i*DIM + 1], codes[i*DIM + 2]);
   }

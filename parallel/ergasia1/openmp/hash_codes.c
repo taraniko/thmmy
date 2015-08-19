@@ -4,13 +4,9 @@
 #include "float.h"
 #include <omp.h>
 
-#ifdef CILK
-#include <cilk/cilk.h>
-#endif
-
 #define DIM 3
 
-#define NUM_THREADS 2
+
 
 inline unsigned int compute_code(float x, float low, float step){
 
@@ -22,12 +18,10 @@ inline unsigned int compute_code(float x, float low, float step){
 /* Function that does the quantization */
 void quantize(unsigned int *codes, float *X, float *low, float step, int N){
 
-//#ifdef CILK
-//  cilk_for(int i=0; i<N; i++){
-//#else
+  omp_set_dynamic(0);
+  omp_set_num_threads(2);
   #pragma omp parallel for
     for(int i=0; i<N; i++){
-//#endif
       for(int j=0; j<DIM; j++){
         codes[i*DIM + j] = compute_code(X[i*DIM + j], low[j], step); 
       } //end for j

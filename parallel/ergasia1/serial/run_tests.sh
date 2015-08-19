@@ -20,10 +20,10 @@ for N in 1000000 2000000 ; do \
     done ; \
 done ;
 # run octant experiments
-for N in 1000000 2000000 ; do \
-    for P in 68 128 ; do \
-        for L in 10 20 ; do \
-           echo Plummer N=$N && ./test_octree $N 1 $P 3 $L >> $FILE_PREF-plummer.txt ; \
-        done ; \
-    done ; \
-done ; 
+#for N in 1000000 2000000 ; do \
+#    for P in 68 128 ; do \
+#        for L in 10 20 ; do \
+#           echo Plummer N=$N && ./test_octree $N 1 $P 3 $L >> $FILE_PREF-plummer.txt ; \
+#        done ; \
+#    done ; \
+#done ; 
