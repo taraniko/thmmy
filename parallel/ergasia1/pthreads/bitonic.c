@@ -42,6 +42,14 @@ int *a;         // data array to be sorted
 int P;          // number of threads
 pthread_t *threads;
 pthread_mutex_t array_mutex;
+pthread_mutex_t args_mutex;
+pthread_mutex_t work_mutex;
+pthread_mutex_t finished_work_mutex;
+pthread_cond_t finished_work_cv;
+pthread_cond_t work_cv;
+int exists_work = 0;
+int end_sort = 0;
+
 
 struct arg_struct{   // thread arguments
     int start;
@@ -83,8 +91,6 @@ int main(int argc, char **argv) {
     printf("Number of threads should be smaller than %d \n",MAX_THREAD_NUM);
     exit(1);
   }
-
-  threads_init();
   
   init();
 
@@ -100,6 +106,8 @@ int main(int argc, char **argv) {
   test();
 
   init();
+  
+  threads_init();
   gettimeofday (&startwtime, NULL);
   sort();
   gettimeofday (&endwtime, NULL);
@@ -111,7 +119,7 @@ int main(int argc, char **argv) {
 
   test();
 
-  // print();
+   print();
 }
 
 /** -------------- SUB-PROCEDURES  ----------------- **/ 
@@ -125,6 +133,7 @@ void test() {
   }
 
   printf(" TEST %s\n",(pass) ? "PASSed" : "FAILed");
+  
 }
 
 
@@ -135,16 +144,23 @@ void init() {
     a[i] = rand() % N; // (N - i);
   }
   
+  
 }
 
 /** procedure threads_init() : initialize threads **/
 void threads_init() {
   threads = (pthread_t *)malloc(P * sizeof(pthread_t));
   int i;
+  
   for (i=0; i<P; i++){
     pthread_create(&threads[i], NULL, worker, &t_args);
   }
+  
   pthread_mutex_init(&array_mutex, NULL);
+  pthread_mutex_init(&args_mutex, NULL);
+  pthread_mutex_init(&work_mutex, NULL);
+  pthread_mutex_init(&finished_work_mutex, NULL);
+  usleep(10000);
 }
 
 /** procedure  print() : print array elements **/
@@ -189,11 +205,24 @@ inline void compare(int i, int j, int dir) {
 void bitonicMerge(int lo, int cnt, int dir) {
   if (cnt>1) {
     int k=cnt/2;
-    // THIS SHOULD BE DONE BY WORKER THREADS (start=lo, middle = k, dir = dir)
-    //int i;
-    //for (i=lo; i<lo+k; i++)
-    //  compare(i, i+k, dir);
-    // TILL HERE
+    // TODO change args struct to add new lo k dir and activate a thread
+
+    pthread_mutex_lock(&args_mutex);
+    t_args.start = lo;
+    t_args.middle = k;
+    t_args.dir = dir;
+    pthread_mutex_lock(&work_mutex);
+    pthread_cond_signal(&work_cv);   // exists work!
+    pthread_mutex_unlock(&work_mutex);
+    pthread_mutex_unlock(&args_mutex);
+    printf("D");
+    
+    //SHOULD WAIT TILL WORKER THREAD FINISH JOB
+    pthread_mutex_lock(&finished_work_mutex);
+    pthread_cond_wait(&finished_work_cv, &finished_work_mutex);
+    pthread_mutex_unlock(&finished_work_mutex);
+    //WAIT TILL HERE
+    
     bitonicMerge(lo, k, dir);
     bitonicMerge(lo+k, k, dir);
   }
@@ -222,7 +251,15 @@ void recBitonicSort(int lo, int cnt, int dir) {
    in ASCENDING order
  **/
 void sort() {
+  printf("ARXH\n");
   recBitonicSort(0, N, ASCENDING);
+  printf("\nTELOS\n");
+  end_sort = 1; // used to get out of threads loop
+  // /* Wait for all threads to complete */
+  //int i;
+  //for (i=0; i<P; i++) {
+  //  pthread_join(threads[i], NULL);
+  //}
 }
 
 
@@ -256,7 +293,14 @@ void impBitonicSort() {
 
 void *worker(void *arguments)
 {
-    struct arg_struct *args = (struct arg_struct *)arguments;
+  struct arg_struct *args = (struct arg_struct *)arguments;
+  printf("i");
+  while(!end_sort){
+    printf("H");
+    pthread_mutex_lock(&work_mutex);
+    pthread_cond_wait(&work_cv, &work_mutex);  // Waits till there is work to do
+    pthread_mutex_unlock(&work_mutex);
+
     pthread_mutex_lock (&array_mutex);
     // TODO code for comparing data
     int i;
@@ -267,6 +311,10 @@ void *worker(void *arguments)
       compare(i, i+k, dir);
     // END code for comparing data
     pthread_mutex_unlock (&array_mutex);
+    pthread_mutex_lock(&finished_work_mutex);
+    pthread_cond_signal(&finished_work_cv); //finished job
+    pthread_mutex_unlock(&finished_work_mutex);
+  }
 
 
     pthread_exit(NULL);
