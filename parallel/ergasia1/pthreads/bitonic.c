@@ -30,19 +30,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 struct timeval startwtime, endwtime;
 double seq_time;
 
+const int MAX_THREAD_NUM = 256;
 
 int N;          // data array size
 int *a;         // data array to be sorted
+int P;          // number of threads
+pthread_t *threads;
+pthread_mutex_t array_mutex;
+
+struct arg_struct{   // thread arguments
+    int start;
+    int middle;
+    int dir;
+
+}t_args;
 
 const int ASCENDING  = 1;
 const int DESCENDING = 0;
 
 
 void init(void);
+void threads_init(void);
 void print(void);
 void sort(void);
 void test(void);
@@ -51,19 +64,27 @@ void compare(int i, int j, int dir);
 void bitonicMerge(int lo, int cnt, int dir);
 void recBitonicSort(int lo, int cnt, int dir);
 void impBitonicSort(void);
+void *worker(void *arguments);
 
 
 /** the main program **/ 
 int main(int argc, char **argv) {
 
-  if (argc != 2) {
-    printf("Usage: %s q\n  where n=2^q is problem size (power of two)\n", 
+  if (argc != 3) {
+    printf("Usage: %s q p\n  where n=2^q is problem size (power of two) and P = 2^p number of threads \n", 
 	   argv[0]);
     exit(1);
   }
 
   N = 1<<atoi(argv[1]);
   a = (int *) malloc(N * sizeof(int));
+  P = 1<<atoi(argv[2]);
+  if(P>MAX_THREAD_NUM) {
+    printf("Number of threads should be smaller than %d \n",MAX_THREAD_NUM);
+    exit(1);
+  }
+
+  threads_init();
   
   init();
 
@@ -113,6 +134,17 @@ void init() {
   for (i = 0; i < N; i++) {
     a[i] = rand() % N; // (N - i);
   }
+  
+}
+
+/** procedure threads_init() : initialize threads **/
+void threads_init() {
+  threads = (pthread_t *)malloc(P * sizeof(pthread_t));
+  int i;
+  for (i=0; i<P; i++){
+    pthread_create(&threads[i], NULL, worker, &t_args);
+  }
+  pthread_mutex_init(&array_mutex, NULL);
 }
 
 /** procedure  print() : print array elements **/
@@ -157,13 +189,16 @@ inline void compare(int i, int j, int dir) {
 void bitonicMerge(int lo, int cnt, int dir) {
   if (cnt>1) {
     int k=cnt/2;
-    int i;
-    for (i=lo; i<lo+k; i++)
-      compare(i, i+k, dir);
+    // THIS SHOULD BE DONE BY WORKER THREADS (start=lo, middle = k, dir = dir)
+    //int i;
+    //for (i=lo; i<lo+k; i++)
+    //  compare(i, i+k, dir);
+    // TILL HERE
     bitonicMerge(lo, k, dir);
     bitonicMerge(lo+k, k, dir);
   }
 }
+
 
 
 
@@ -212,4 +247,28 @@ void impBitonicSort() {
       }
     }
   }
+}
+
+/*
+  thread worker
+*/
+
+
+void *worker(void *arguments)
+{
+    struct arg_struct *args = (struct arg_struct *)arguments;
+    pthread_mutex_lock (&array_mutex);
+    // TODO code for comparing data
+    int i;
+    int lo = args -> start;
+    int k = args -> middle;
+    int dir = args -> dir;
+    for (i=lo; i<lo+k; i++)
+      compare(i, i+k, dir);
+    // END code for comparing data
+    pthread_mutex_unlock (&array_mutex);
+
+
+    pthread_exit(NULL);
+    return NULL;
 }
