@@ -43,18 +43,20 @@ int P;          // number of threads
 pthread_t *threads;
 pthread_mutex_t array_mutex;
 pthread_mutex_t args_mutex;
-pthread_mutex_t work_mutex;
+pthread_mutex_t n_mutex;
 pthread_mutex_t finished_work_mutex;
 pthread_cond_t finished_work_cv;
 pthread_cond_t work_cv;
 int exists_work = 0;
 int end_sort = 0;
+int nThreads = 0;
 
 
 struct arg_struct{   // thread arguments
     int start;
     int middle;
     int dir;
+    int id;
 
 }t_args;
 
@@ -119,7 +121,7 @@ int main(int argc, char **argv) {
 
   test();
 
-   print();
+  //print();
 }
 
 /** -------------- SUB-PROCEDURES  ----------------- **/ 
@@ -158,7 +160,7 @@ void threads_init() {
   
   pthread_mutex_init(&array_mutex, NULL);
   pthread_mutex_init(&args_mutex, NULL);
-  pthread_mutex_init(&work_mutex, NULL);
+  pthread_mutex_init(&n_mutex, NULL);
   pthread_mutex_init(&finished_work_mutex, NULL);
   usleep(10000);
 }
@@ -205,22 +207,26 @@ inline void compare(int i, int j, int dir) {
 void bitonicMerge(int lo, int cnt, int dir) {
   if (cnt>1) {
     int k=cnt/2;
-    // TODO change args struct to add new lo k dir and activate a thread
+    
+    struct arg_struct par;
+    par.start = lo;
+    par.middle = k;
+    par.dir = dir;
 
-    pthread_mutex_lock(&args_mutex);
-    t_args.start = lo;
-    t_args.middle = k;
-    t_args.dir = dir;
-    pthread_mutex_lock(&work_mutex);
-    pthread_cond_signal(&work_cv);   // exists work!
-    pthread_mutex_unlock(&work_mutex);
-    pthread_mutex_unlock(&args_mutex);
-    printf("D");
+    pthread_t thread;
+    if (nThreads<P){
+      pthread_create(&thread, NULL, worker, &par);
+      pthread_mutex_lock(&n_mutex);
+      nThreads++;
+      pthread_mutex_unlock(&n_mutex);
+    }
+
     
     //SHOULD WAIT TILL WORKER THREAD FINISH JOB
-    pthread_mutex_lock(&finished_work_mutex);
-    pthread_cond_wait(&finished_work_cv, &finished_work_mutex);
-    pthread_mutex_unlock(&finished_work_mutex);
+    //pthread_mutex_lock(&finished_work_mutex);
+    //pthread_cond_wait(&finished_work_cv, &finished_work_mutex);
+    //pthread_mutex_unlock(&finished_work_mutex);
+    pthread_join(thread, NULL);
     //WAIT TILL HERE
     
     bitonicMerge(lo, k, dir);
@@ -290,33 +296,45 @@ void impBitonicSort() {
   thread worker
 */
 
-
-void *worker(void *arguments)
-{
-  struct arg_struct *args = (struct arg_struct *)arguments;
-  printf("i");
-  while(!end_sort){
-    printf("H");
-    pthread_mutex_lock(&work_mutex);
-    pthread_cond_wait(&work_cv, &work_mutex);  // Waits till there is work to do
-    pthread_mutex_unlock(&work_mutex);
-
-    pthread_mutex_lock (&array_mutex);
-    // TODO code for comparing data
-    int i;
-    int lo = args -> start;
-    int k = args -> middle;
-    int dir = args -> dir;
-    for (i=lo; i<lo+k; i++)
-      compare(i, i+k, dir);
-    // END code for comparing data
-    pthread_mutex_unlock (&array_mutex);
-    pthread_mutex_lock(&finished_work_mutex);
-    pthread_cond_signal(&finished_work_cv); //finished job
-    pthread_mutex_unlock(&finished_work_mutex);
-  }
-
-
-    pthread_exit(NULL);
-    return NULL;
+void * workerSort(void* arguments){
+    struct arg_struct * args = arguments;
+    int lo = args->start;
+    int cnt = args->middle;
+    int dir = args->dir;
+    int tid = args->id;
+    if ( cnt > 1 ) {
+        int k = cnt / 2;
+        if( layer >= threadlayers ) {
+            qsort( a + lo, k, sizeof( int ), asc );
+            qsort( a + ( lo + k ) , k, sizeof( int ), desc );
+        }
+        else{
+            sarg arg1;
+            pthread_t thread1;
+            arg1.lo = lo;
+            arg1.cnt = k;
+            arg1.dir = ASCENDING;
+            arg1.layer = layer + 1;
+            pthread_create( &thread1, NULL, PrecBitonicSort, &arg1 );
+            
+            sarg arg2;
+            pthread_t thread2;
+            arg2.lo = lo + k;
+            arg2.cnt = k;
+            arg2.dir = DESCENDING;
+            arg2.layer = layer + 1;
+            pthread_create( &thread2, NULL, PrecBitonicSort, &arg2 );
+            
+            
+            pthread_join( thread1, NULL );
+            pthread_join( thread2, NULL );
+        }
+        sarg arg3;
+        arg3.lo = lo;
+        arg3.cnt = cnt;
+        arg3.dir = dir;
+        arg3.layer = threadlayers - layer;
+        PbitonicMerge( &arg3 );
+    }
+    return 0;
 }
