@@ -50,7 +50,7 @@ int n;		  // number of threads
 
 int nThreads = 1;             
 int sThreads = 0;			  // DEBUG
-int threshold = 1<<10;        // TODO
+int threshold = 1<<15;        // TODO
 
 const int ASCENDING  = 1;
 const int DESCENDING = 0;
@@ -72,6 +72,12 @@ void * PrecBitonicSort( void * arg );
 void * PbitonicMerge( void * arg );
 void PimpBitonicSort( void );
 void cilkBitonicSort(void);
+
+
+void cilksort(void);
+void cilkrecBitonicSort(int lo, int cnt, int dir);
+void cilkbitonicMerge(int lo, int cnt, int dir);
+
 
 /** compare for qsort **/
 int desc( const void *a, const void *b ){
@@ -104,7 +110,12 @@ int main( int argc, char **argv ) {
     char n_threads_char = (char) n;
     const char* char_pointer;
     char_pointer = &n_threads_char;
-    __cilkrts_set_param("nworkers", char_pointer);
+
+
+    char str[5];
+    sprintf(str, "%d", n);
+    __cilkrts_set_param("nworkers", str);
+
 
     pthread_mutex_init(&n_mutex, NULL);
     
@@ -154,8 +165,18 @@ int main( int argc, char **argv ) {
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
     printf( "Bitonic cilk with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
     test();
+
+    init();
+    gettimeofday( &startwtime, NULL );
+    cilksort();
+    gettimeofday( &endwtime, NULL );
+    seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    printf( "Bitonic cilk recursive with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
+    test();
     
     printf("Spawned: %d\n",sThreads);
+    printf("Cilk used %d threads\n",__cilkrts_get_nworkers());
+
 
 
 }
@@ -504,4 +525,56 @@ void cilkBitonicSort() {
                 }
         }
     }
+}
+
+/*new cilk recursive */
+
+/** Procedure cilkbitonicMerge() 
+   It recursively sorts a bitonic sequence in ascending order, 
+   if dir = ASCENDING, and in descending order otherwise. 
+   The sequence to be sorted starts at index position lo,
+   the parameter cbt is the number of elements to be sorted. 
+ **/
+void cilkbitonicMerge(int lo, int cnt, int dir) {
+  if (cnt>1) {
+    int k=cnt/2;
+    int i;
+    for (i=lo; i<lo+k; i++)
+      compare(i, i+k, dir);
+    cilk_spawn cilkbitonicMerge(lo, k, dir);
+    cilkbitonicMerge(lo+k, k, dir);
+  }
+}
+
+
+
+/** function cilkrecBitonicSort() 
+    first produces a bitonic sequence by recursively sorting 
+    its two halves in opposite sorting orders, and then
+    calls bitonicMerge to make them in the same order 
+ **/
+void cilkrecBitonicSort(int lo, int cnt, int dir) {
+  if (cnt>1) {
+  	int k=cnt/2;
+  	if(cnt<threshold){
+    	cilk_spawn cilkrecBitonicSort(lo, k, ASCENDING);
+    	cilkrecBitonicSort(lo+k, k, DESCENDING);
+    	cilk_sync;
+	}
+	else{
+		cilk_spawn qsort(a+lo,k,sizeof(int),asc);
+		qsort(a+(lo+k),k,sizeof(int),desc);
+		cilk_sync;
+	}
+    cilkbitonicMerge(lo, cnt, dir);
+  }
+}
+
+
+/** function cilksort() 
+   Caller of recBitonicSort for sorting the entire array of length N 
+   in ASCENDING order
+ **/
+void cilksort() {
+  cilkrecBitonicSort(0, N, ASCENDING);
 }
