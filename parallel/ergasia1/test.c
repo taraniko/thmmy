@@ -335,7 +335,7 @@ void * PbitonicMerge( void * arg ){
         arg2.dir = dir;
       
         
-        if (nThreads<n && cnt>threshold){  
+        if (nThreads<n){  
           pthread_create( &thread1, NULL, PbitonicMerge, &arg1 );
           pthread_mutex_lock(&n_mutex);
           nThreads++;
@@ -349,7 +349,7 @@ void * PbitonicMerge( void * arg ){
           PbitonicMerge(&arg1);
 
       	/*
-        if (nThreads<n && cnt>threshold){  
+        if (nThreads<n){  
           pthread_create( &thread2, NULL, PbitonicMerge, &arg2 );
           pthread_mutex_lock(&n_mutex);
           nThreads++;
@@ -394,13 +394,11 @@ void * PrecBitonicSort( void * arg ){
 
     if ( cnt > 1 ) {
         int k = cnt / 2;
-        //if( abs(k - lo) < (1<< 10) ) {
-        //	printf("M %d \n",abs(k-lo));
-        //	printf("M %d \n",sThreads);
-        //    qsort( a + lo, k, sizeof( int ), asc );
-        //    qsort( a + ( lo + k ) , k, sizeof( int ), desc );
-        //}
-        //else{
+        if( cnt<=threshold ) {
+            qsort( a + lo, k, sizeof( int ), asc );
+            qsort( a + ( lo + k ) , k, sizeof( int ), desc );  // TODO SPAWN THREAD FOR QUICKSORT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        }
+        else{
 
             int t1 = 0, t2 = 0;
             sarg arg1;
@@ -454,7 +452,7 @@ void * PrecBitonicSort( void * arg ){
               nThreads--;
               pthread_mutex_unlock(&n_mutex);
             }
-        //}
+        }
             sarg arg3;
             arg3.lo = lo;
             arg3.cnt = cnt;
