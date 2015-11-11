@@ -50,7 +50,7 @@ int n;		  // number of threads
 
 int nThreads = 1;             
 int sThreads = 0;			  // DEBUG
-int threshold = 1<<15;        // TODO
+int threshold;        // TODO
 
 const int ASCENDING  = 1;
 const int DESCENDING = 0;
@@ -105,6 +105,8 @@ int main( int argc, char **argv ) {
 
     N = 1 << atoi( argv[ 1 ] );
     n = 1 << atoi( argv[ 2 ] );
+
+    threshold = N/n;
 
     const char* wow;
     char n_threads_char = (char) n;
