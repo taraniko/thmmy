@@ -34,6 +34,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <omp.h>
+#include <cilk/cilk.h>
 
 
 struct timeval startwtime, endwtime;
@@ -42,12 +43,14 @@ double seq_time;
 pthread_mutex_t n_mutex;
 
 
-int N,n;          // data array size
-int *a;         // data array to be sorted
+int N;        // data array size
+int *a;       // data array to be sorted
+int n;		  // number of threads	 
 
-int nThreads = 1;
-int sThreads = 0;
-int threshold = 1<<20;
+
+int nThreads = 1;             
+int sThreads = 0;			  // DEBUG
+int threshold = 1<<10;        // TODO
 
 const int ASCENDING  = 1;
 const int DESCENDING = 0;
@@ -68,6 +71,7 @@ void Psort( void );
 void * PrecBitonicSort( void * arg );
 void * PbitonicMerge( void * arg );
 void PimpBitonicSort( void );
+void cilkBitonicSort(void);
 
 /** compare for qsort **/
 int desc( const void *a, const void *b ){
@@ -96,6 +100,12 @@ int main( int argc, char **argv ) {
     N = 1 << atoi( argv[ 1 ] );
     n = 1 << atoi( argv[ 2 ] );
 
+    const char* wow;
+    char n_threads_char = (char) n;
+    const char* char_pointer;
+    char_pointer = &n_threads_char;
+    __cilkrts_set_param("nworkers", char_pointer);
+
     pthread_mutex_init(&n_mutex, NULL);
     
  
@@ -105,7 +115,7 @@ int main( int argc, char **argv ) {
     qsort( a, N, sizeof( int ), asc );
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
-    printf( "Qsort wall clock time = %f\n", seq_time );
+    printf( "Qsort time = %f\n", seq_time );
 //    test();
    
     //init();
@@ -120,7 +130,7 @@ int main( int argc, char **argv ) {
     Psort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
-    printf( "Bitonic parallel recursive with qsort and %i threads wall clock time = %f\n", 1 << atoi( argv[ 2 ] ), seq_time );
+    printf( "Bitonic pthreads with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ), seq_time );
     test();
     //init();
     //gettimeofday( &startwtime, NULL );
@@ -134,9 +144,19 @@ int main( int argc, char **argv ) {
     PimpBitonicSort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
-    printf( "Bitonic parallel imperagive with %i threads wall clock time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
+    printf( "Bitonic omp with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
     test();
+
+    init();
+    gettimeofday( &startwtime, NULL );
+    cilkBitonicSort();
+    gettimeofday( &endwtime, NULL );
+    seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    printf( "Bitonic cilk with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
+    test();
+    
     printf("Spawned: %d\n",sThreads);
+
 
 }
 
@@ -463,3 +483,25 @@ void PimpBitonicSort() {
         }
     }
 } 
+
+/*
+  imperative version of bitonic sort
+*/
+void cilkBitonicSort() { 
+    int i,j,k=0,term;
+    for (k = 2; k <= N; k *= 2 ) {
+        for (j=k>>1; j>0; j=j>>1) {
+                cilk_for (i=0; i<N; i++) {
+                    int ij=i^j;
+                    if ((ij)>i) {
+                        if ((i&k)==0 && a[i] > a[ij]) {
+                            exchange(i,ij);
+                        }
+                        if ((i&k)!=0 && a[i] < a[ij]){
+                            exchange(i,ij);
+                        }
+                    }
+                }
+        }
+    }
+}
