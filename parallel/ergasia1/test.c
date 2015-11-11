@@ -45,8 +45,9 @@ pthread_mutex_t n_mutex;
 int N,n;          // data array size
 int *a;         // data array to be sorted
 
-int threadlayers;
 int nThreads = 1;
+int sThreads = 0;
+int threshold = 1<<20;
 
 const int ASCENDING  = 1;
 const int DESCENDING = 0;
@@ -96,11 +97,8 @@ int main( int argc, char **argv ) {
     n = 1 << atoi( argv[ 2 ] );
 
     pthread_mutex_init(&n_mutex, NULL);
-    threadlayers = atoi( argv[ 2 ] );
     
-    if( threadlayers != 0 && threadlayers != 1 ) {
-  --threadlayers;
-    }
+ 
     a = (int *) malloc( N * sizeof( int ) );
     init();
     gettimeofday( &startwtime, NULL );
@@ -110,12 +108,12 @@ int main( int argc, char **argv ) {
     printf( "Qsort wall clock time = %f\n", seq_time );
 //    test();
    
-    init();
-    gettimeofday( &startwtime, NULL );
-    sort();
-    gettimeofday( &endwtime, NULL );
-    seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
-    printf( "Bitonic serial recursive wall clock time = %f\n", seq_time );
+    //init();
+    //gettimeofday( &startwtime, NULL );
+    //sort();
+    //gettimeofday( &endwtime, NULL );
+    //seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    //printf( "Bitonic serial recursive wall clock time = %f\n", seq_time );
   //  test();
      init();
     gettimeofday( &startwtime, NULL );
@@ -124,12 +122,12 @@ int main( int argc, char **argv ) {
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
     printf( "Bitonic parallel recursive with qsort and %i threads wall clock time = %f\n", 1 << atoi( argv[ 2 ] ), seq_time );
     test();
-    init();
-    gettimeofday( &startwtime, NULL );
-    impBitonicSort();
-    gettimeofday( &endwtime, NULL );
-    seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
-    printf( "Bitonic serial imperative wall clock time = %f\n", seq_time );
+    //init();
+    //gettimeofday( &startwtime, NULL );
+    //impBitonicSort();
+    //gettimeofday( &endwtime, NULL );
+    //seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    //printf( "Bitonic serial imperative wall clock time = %f\n", seq_time );
     //test();
     init();
     gettimeofday( &startwtime, NULL );
@@ -137,7 +135,8 @@ int main( int argc, char **argv ) {
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
     printf( "Bitonic parallel imperagive with %i threads wall clock time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
-    //test();
+    test();
+    printf("Spawned: %d\n",sThreads);
 
 }
 
@@ -265,7 +264,7 @@ void impBitonicSort() {
 
 
 typedef struct{
-    int lo, cnt, dir, layer;
+    int lo, cnt, dir;
 } sarg;
 
 /** Procedure bitonicMerge
@@ -275,7 +274,6 @@ void * PbitonicMerge( void * arg ){
     int lo = ( ( sarg * ) arg ) -> lo;
     int cnt = ( ( sarg * ) arg ) -> cnt;
     int dir = ( ( sarg * ) arg ) -> dir;
-    int layer = ( ( sarg * ) arg ) -> layer;
     if( cnt > 1 ){
         int k = cnt / 2;
         int i;
@@ -288,31 +286,38 @@ void * PbitonicMerge( void * arg ){
         arg1.lo = lo;
         arg1.cnt = k;
         arg1.dir = dir;
-        arg1.layer = layer - 1;
+        
         arg2.lo = lo + k;
         arg2.cnt = k;
         arg2.dir = dir;
-        arg2.layer = layer - 1;
-
-        if (nThreads<n){  
+      
+        
+        if (nThreads<n && cnt>threshold){  
           pthread_create( &thread1, NULL, PbitonicMerge, &arg1 );
           pthread_mutex_lock(&n_mutex);
           nThreads++;
+          sThreads++;
           pthread_mutex_unlock(&n_mutex);
           t1 = 1;
         }
         else
-          bitonicMerge(lo, k, dir);
         
-        if (nThreads<n){  
+          //bitonicMerge(lo, k, dir);
+          PbitonicMerge(&arg1);
+
+      	/*
+        if (nThreads<n && cnt>threshold){  
           pthread_create( &thread2, NULL, PbitonicMerge, &arg2 );
           pthread_mutex_lock(&n_mutex);
           nThreads++;
+          sThreads++;
           pthread_mutex_unlock(&n_mutex);
           t2 = 1;
         }
         else
-          bitonicMerge(lo+k, k, dir);
+        */
+          //bitonicMerge(lo+k, k, dir);
+          PbitonicMerge(&arg2);
 
         if (t1){
               pthread_join( thread1, NULL );
@@ -343,15 +348,16 @@ void * PrecBitonicSort( void * arg ){
     int lo = ( ( sarg * ) arg ) -> lo;
     int cnt = ( ( sarg * ) arg ) -> cnt;
     int dir = ( ( sarg * ) arg ) -> dir;
-    int layer = ( ( sarg * ) arg ) -> layer;
+
     if ( cnt > 1 ) {
         int k = cnt / 2;
-        
-        if( cnt - lo < 1<< 22 ) {
-            qsort( a + lo, k, sizeof( int ), asc );
-            qsort( a + ( lo + k ) , k, sizeof( int ), desc );
-        }
-        else{
+        //if( abs(k - lo) < (1<< 10) ) {
+        //	printf("M %d \n",abs(k-lo));
+        //	printf("M %d \n",sThreads);
+        //    qsort( a + lo, k, sizeof( int ), asc );
+        //    qsort( a + ( lo + k ) , k, sizeof( int ), desc );
+        //}
+        //else{
 
             int t1 = 0, t2 = 0;
             sarg arg1;
@@ -359,33 +365,40 @@ void * PrecBitonicSort( void * arg ){
             arg1.lo = lo;
             arg1.cnt = k;
             arg1.dir = ASCENDING;
-            arg1.layer = layer + 1;
+            
             if (nThreads<n){  
               pthread_create( &thread1, NULL, PrecBitonicSort, &arg1 );
               pthread_mutex_lock(&n_mutex);
               nThreads++;
+              sThreads++;
               pthread_mutex_unlock(&n_mutex);
               t1 = 1;
             }
             else
-              recBitonicSort(lo, k, ASCENDING);
+            
+              //recBitonicSort(lo, k, ASCENDING);
+            	//PrecBitonicSort(&arg1);
+            	qsort(a+lo,k,sizeof(int),asc);
             
             sarg arg2;
             pthread_t thread2;
             arg2.lo = lo + k;
             arg2.cnt = k;
             arg2.dir = DESCENDING;
-            arg2.layer = layer + 1;
+           /* 
             if (nThreads<n){  
               pthread_create( &thread2, NULL, PrecBitonicSort, &arg2 );
               pthread_mutex_lock(&n_mutex);
               nThreads++;
+              sThreads++;
               pthread_mutex_unlock(&n_mutex);
               t2 = 1;
             }
             else
-              recBitonicSort(lo+k, k, DESCENDING);
-            
+            */
+              //recBitonicSort(lo+k, k, DESCENDING);
+              PrecBitonicSort(&arg2);
+
             if (t1){
               pthread_join( thread1, NULL );
               pthread_mutex_lock(&n_mutex);
@@ -398,13 +411,13 @@ void * PrecBitonicSort( void * arg ){
               nThreads--;
               pthread_mutex_unlock(&n_mutex);
             }
-        }
+        //}
             sarg arg3;
             arg3.lo = lo;
             arg3.cnt = cnt;
             arg3.dir = dir;
-            arg3.layer = threadlayers - layer;
             
+
             PbitonicMerge( &arg3 );
         
     }
@@ -420,7 +433,6 @@ void Psort() {
     arg.lo = 0;
     arg.cnt = N;
     arg.dir = ASCENDING;
-    arg.layer = 0;
     
     PrecBitonicSort( &arg );
 }
