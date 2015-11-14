@@ -68,8 +68,8 @@ void recBitonicSort( int lo, int cnt, int dir );
 void bitonicMerge( int lo, int cnt, int dir );
 
 void Psort( void );
-void * PrecBitonicSort( void * arg );
-void * PbitonicMerge( void * arg );
+void * pThreadBitonicSort( void * arg );
+void * pThreadBitonicMerge( void * arg );
 void PimpBitonicSort( void );
 void cilkBitonicSort(void);
 
@@ -313,7 +313,7 @@ typedef struct{
 /** Procedure bitonicMerge
  *  Same as serial, but uses pthreads.
  **/
-void * PbitonicMerge( void * arg ){
+void * pThreadBitonicMerge( void * arg ){
     int lo = ( ( sarg * ) arg ) -> lo;
     int cnt = ( ( sarg * ) arg ) -> cnt;
     int dir = ( ( sarg * ) arg ) -> dir;
@@ -336,7 +336,7 @@ void * PbitonicMerge( void * arg ){
       
         
         if (nThreads<n){  
-          pthread_create( &thread1, NULL, PbitonicMerge, &arg1 );
+          pthread_create( &thread1, NULL, pThreadBitonicMerge, &arg1 );
           pthread_mutex_lock(&n_mutex);
           nThreads++;
           sThreads++;
@@ -346,11 +346,11 @@ void * PbitonicMerge( void * arg ){
         else
         
           //bitonicMerge(lo, k, dir);
-          PbitonicMerge(&arg1);
+          pThreadBitonicMerge(&arg1);
 
       	/*
         if (nThreads<n){  
-          pthread_create( &thread2, NULL, PbitonicMerge, &arg2 );
+          pthread_create( &thread2, NULL, pThreadBitonicMerge, &arg2 );
           pthread_mutex_lock(&n_mutex);
           nThreads++;
           sThreads++;
@@ -360,7 +360,7 @@ void * PbitonicMerge( void * arg ){
         else
         */
           //bitonicMerge(lo+k, k, dir);
-          PbitonicMerge(&arg2);
+          pThreadBitonicMerge(&arg2);
 
         if (t1){
               pthread_join( thread1, NULL );
@@ -379,7 +379,7 @@ void * PbitonicMerge( void * arg ){
     return 0;
 }
 
-/** function PrecBitonicSort() 
+/** function pThreadBitonicSort() 
     first produces a bitonic sequence by recursively sorting 
     its two halves in opposite sorting orders, and then
     calls bitonicMerge to make them in the same order 
@@ -387,7 +387,7 @@ void * PbitonicMerge( void * arg ){
     Uses pthreads
  **/
 
-void * PrecBitonicSort( void * arg ){
+void * pThreadBitonicSort( void * arg ){
     int lo = ( ( sarg * ) arg ) -> lo;
     int cnt = ( ( sarg * ) arg ) -> cnt;
     int dir = ( ( sarg * ) arg ) -> dir;
@@ -408,7 +408,7 @@ void * PrecBitonicSort( void * arg ){
             arg1.dir = ASCENDING;
             
             if (nThreads<n){  
-              pthread_create( &thread1, NULL, PrecBitonicSort, &arg1 );
+              pthread_create( &thread1, NULL, pThreadBitonicSort, &arg1 );
               pthread_mutex_lock(&n_mutex);
               nThreads++;
               sThreads++;
@@ -418,7 +418,7 @@ void * PrecBitonicSort( void * arg ){
             else
             
               //recBitonicSort(lo, k, ASCENDING);
-            	//PrecBitonicSort(&arg1);
+            	//pThreadBitonicSort(&arg1);
             	qsort(a+lo,k,sizeof(int),asc);
             
             sarg arg2;
@@ -428,7 +428,7 @@ void * PrecBitonicSort( void * arg ){
             arg2.dir = DESCENDING;
            /* 
             if (nThreads<n){  
-              pthread_create( &thread2, NULL, PrecBitonicSort, &arg2 );
+              pthread_create( &thread2, NULL, pThreadBitonicSort, &arg2 );
               pthread_mutex_lock(&n_mutex);
               nThreads++;
               sThreads++;
@@ -438,7 +438,7 @@ void * PrecBitonicSort( void * arg ){
             else
             */
               //recBitonicSort(lo+k, k, DESCENDING);
-              PrecBitonicSort(&arg2);
+              pThreadBitonicSort(&arg2);
 
             if (t1){
               pthread_join( thread1, NULL );
@@ -459,7 +459,7 @@ void * PrecBitonicSort( void * arg ){
             arg3.dir = dir;
             
 
-            PbitonicMerge( &arg3 );
+            pThreadBitonicMerge( &arg3 );
         
     }
     return 0;
@@ -475,7 +475,7 @@ void Psort() {
     arg.cnt = N;
     arg.dir = ASCENDING;
     
-    PrecBitonicSort( &arg );
+    pThreadBitonicSort( &arg );
 }
 
 
