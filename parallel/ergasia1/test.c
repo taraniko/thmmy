@@ -82,6 +82,7 @@ void cilksort(void);
 void cilkrecBitonicSort(int lo, int cnt, int dir);
 void cilkbitonicMerge(int lo, int cnt, int dir);
 
+void filewrite(int q, int p, double t1, double t2, double t3, double t4, double t5,double t6);
 
 /* quicksort compare functions */
 int asc( const void *a, const void *b ){
@@ -114,6 +115,8 @@ int main( int argc, char **argv ) {
 
     threshold = N/n;
 
+    double t1,t2,t3,t4,t5,t6;
+
 
     // set max number of cilk threads
     char str[5];
@@ -132,6 +135,7 @@ int main( int argc, char **argv ) {
     qsort( a, N, sizeof( int ), asc );
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    t1 = seq_time;
     printf( "Qsort time = %f\n", seq_time );
     test();
    
@@ -141,6 +145,7 @@ int main( int argc, char **argv ) {
     sort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    t2 = seq_time;
     printf( "Bitonic serial recursive time = %f\n", seq_time );
     test();
 
@@ -150,6 +155,7 @@ int main( int argc, char **argv ) {
     pThreadSort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    t3 = seq_time;
     printf( "Bitonic pthreads with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ), seq_time );
     test();
 
@@ -159,6 +165,7 @@ int main( int argc, char **argv ) {
     impBitonicSort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    t4 = seq_time;
     printf( "Bitonic serial imperative time = %f\n", seq_time );
     test();
     
@@ -168,6 +175,7 @@ int main( int argc, char **argv ) {
     openmpBitonicSort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    t5 = seq_time;
     printf( "Bitonic omp with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
     test();
 
@@ -177,12 +185,30 @@ int main( int argc, char **argv ) {
     cilksort();
     gettimeofday( &endwtime, NULL );
     seq_time = (double)( ( endwtime.tv_usec - startwtime.tv_usec ) / 1.0e6 + endwtime.tv_sec - startwtime.tv_sec );
+    t6 = seq_time;
     printf( "Bitonic cilk recursive with %i threads time = %f\n", 1 << atoi( argv[ 2 ] ),  seq_time );
     test();
 
-
+    filewrite(atoi(argv[1]),atoi(argv[2]),t1,t2,t3,t4,t5,t6);
 
 }
+
+/* procedure filewrite()
+   writes the results to a file */
+void filewrite(int q,int p,double t1, double t2, double t3, double t4, double t5,double t6) {
+  FILE *pFile;
+  pFile=fopen("results.csv", "a");
+  if(pFile==NULL) {
+    perror("Error opening file.");
+    exit(1);
+  }
+  fprintf(pFile,"%d,%d,%f,%f,%f,%f,%f,%f\n",q,p,t1,t2,t3,t4,t5,t6 );
+  fclose(pFile);
+  printf("Successfully stored results!\n");
+}
+
+
+
 
 
 /* procedure test() : verify sort results */
