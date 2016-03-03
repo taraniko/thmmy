@@ -13,15 +13,16 @@ public class TestDB {
 		 */
 
 		try {
+			String userName = "nikos";
+			String password = "taras";
 
-			String url ="jdbc:sqlserver://37.6.143.67:1433;databaseName=stelios;integratedSecurity=true";
+			String url ="jdbc:sqlserver://37.6.143.67:1433;databaseName=stelios";
 			//String url = "jdbc:sqlserver://NIKOLAS-PC\\SQLEXPRESS;databaseName=stelios;integratedSecurity=true";
 			// String url
 			// ="jdbc:sqlserver://NIKOLAS-PC\\SQLEXPRESS;databaseName=stelios";
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-			Connection conn = DriverManager.getConnection(url);
-			// Connection conn = DriverManager.getConnection(url, userName,
-			// password);
+			// Connection conn = DriverManager.getConnection(url);
+			Connection conn = DriverManager.getConnection(url, userName, password);
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs;
