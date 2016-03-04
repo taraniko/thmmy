@@ -4,11 +4,14 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Container;
 import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -161,7 +164,7 @@ class TestDB2 {
 	
 	public void fillMainUserCard(JPanel cardMain)
 	{
-		frame.setBounds(100, 100, 640, 240);
+		frame.setBounds(100, 100, 640, 640);
 	    
 	    JLabel lblDistrict = new JLabel("Περιφέρεια: ");
 	    final JComboBox<String> listDistricts = new JComboBox<String>(db.getDistricts());
@@ -176,34 +179,63 @@ class TestDB2 {
 	    JLabel lblLifeguard = new JLabel("Ναυαγοσώστης: ");
 	    final JCheckBox chkLifeguard = new JCheckBox();
 	    
-	    JLabel lblEmpty = new JLabel();
+	    
+	    final JTextArea txtResult = new JTextArea();
+	    
 	    JButton btnSearch = new JButton("Αναζήτηση");
 	    btnSearch.addActionListener(new ActionListener() {
 	    	 
             public void actionPerformed(ActionEvent e)
             {
                 //Execute when button is pressed
-                db.searchBeaches(listDistricts.getSelectedItem().toString(),listPopularity.getSelectedItem().toString(),
+            	
+                String res =  db.searchBeaches(listDistricts.getSelectedItem().toString(),listPopularity.getSelectedItem().toString(),
                 		chkShower.isSelected(),chkLifeguard.isSelected());
+                txtResult.setText(res);
             }
         });     
 	    
-	    GridLayout experimentLayout = new GridLayout(0,2,10,10);
-	    cardMain.setLayout(experimentLayout);
 	    
 	    
-	    cardMain.add(lblDistrict);
-	    cardMain.add(listDistricts);
-	    cardMain.add(lblPopularity);
-	    cardMain.add(listPopularity);
 	    
-	    cardMain.add(lblShower);
-	    cardMain.add(chkShower);
-	    cardMain.add(lblLifeguard);
-	    cardMain.add(chkLifeguard);
 	    
-	    cardMain.add(lblEmpty);
-	    cardMain.add(btnSearch);
+	    
+	    cardMain.setLayout(new GridBagLayout());
+	    GridBagConstraints c = new GridBagConstraints();
+	    
+	    c.gridx = 0;
+	    c.gridy = 0;
+	    cardMain.add(lblDistrict,c);
+	    c.gridx = 2;
+	    cardMain.add(listDistricts,c);
+	    
+	    c.gridx = 0;
+	    c.gridy = 1;
+	    cardMain.add(lblPopularity,c);
+	    c.gridx = 2;
+	    cardMain.add(listPopularity,c);
+	    
+	    c.gridx = 0;
+	    c.gridy = 2;
+	    cardMain.add(lblShower,c);
+	    c.gridx = 2;
+	    cardMain.add(chkShower,c);
+	    
+	    c.gridx = 0;
+	    c.gridy = 3;
+	    cardMain.add(lblLifeguard,c);
+	    c.gridx = 2;
+	    cardMain.add(chkLifeguard,c);
+	    
+	    c.gridx = 2;
+	    c.gridy = 4;
+	    cardMain.add(btnSearch,c);
+	    
+	    c.gridy = 5;
+	    c.gridx = 1;
+	    c.anchor = GridBagConstraints.CENTER;
+	    cardMain.add(txtResult,c);
+	    
 	    
 	    
 	    
@@ -258,6 +290,7 @@ class ConnectDB
 	public String[] getDistricts()
 	{
 		ArrayList<String> districts = new ArrayList<String>();
+		districts.add("All");
 		try {
 			ResultSet rs;
 			String q = new String("SELECT DISTINCT District FROM Beach");
@@ -277,30 +310,71 @@ class ConnectDB
 		return dArray;
 	}
 	
-	public void searchBeaches(String district, String popularity, boolean shower,
+	public String searchBeaches(String district, String popularity, boolean shower,
 			boolean lifeguard)
 	{
-		String q = new String("SELECT * FROM Beach WHERE District='" + district+ "'");
-		if (!popularity.equals("All"))
-			q += " AND Popularity=" + popularity;
-		if (shower)
-			q += " AND Shower='True'";
-		if (lifeguard)
-			q += " AND Lifeguard='True'";
+		String q = new String("SELECT * FROM Beach");
+		boolean andFlag = false;
+		
+		if (shower || lifeguard || !district.equals("All") || !popularity.equals("All") )
+			q += " WHERE";
+		
+		if (!district.equals("All")){ 
+			q += " District='" + district+ "'";
+			andFlag = true;
+		}
+		
+		if (!popularity.equals("All")){
+			if (andFlag) q+= " AND";
+			q += " Popularity=" + popularity;
+			andFlag = true;
+		}
+
+		if (shower){
+			if (andFlag) q+= " AND";
+			q += " Shower='True'";
+			andFlag = true;
+		}
+		
+		if (lifeguard){
+			if (andFlag) q+= " AND";
+			q += " Lifeguard='True'";
+			andFlag = true;
+		}
+		
 		System.out.println(q);
 		
+		String res = new String("");
 		ResultSet rs;
 		try {
 			rs = stmt.executeQuery(q);
-			while (rs.next()){
+			/*ResultSetMetaData rsmd = rs.getMetaData();
+		    int columnsNumber = rsmd.getColumnCount();
+		    while (rs.next()) {
+		        for (int i = 1; i <= columnsNumber; i++) {
+		            if (i > 1) res += (",  ");
+		            String columnValue = rs.getString(i);
+		            res += columnValue + " " + rsmd.getColumnName(i);
+		        }
+		        res += "\n\r";
+		    }
+		    */
+			boolean flag = false;
+			res += "Αποτέλεσμα αναζήτησης:\r\n\r\n";	
+			while (rs.next()) {
+				flag = true;
 				String beach = rs.getString("Name");
-				System.out.println(beach);
+				res += beach + "\r\n";
 			}
+			if (!flag)
+				res += "Δεν υπάρχουν παραλίες με αυτά τα κριτήρια!";
+				
 		} catch (SQLException e) {
 			System.err.println("Got an exception! ");
 			System.err.println(e.getMessage());
 		}
 		
+		return res;
 		
 	
 		
