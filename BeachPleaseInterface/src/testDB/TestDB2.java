@@ -11,8 +11,11 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 import javax.swing.*;
+
+import java.awt.GridLayout;
 
 
 
@@ -21,6 +24,7 @@ class TestDB2 {
 	static private JPanel cards;
 	static private JFrame frame;
 	static private String priviledge;
+	static private ConnectDB db;
 	TestDB2 window;
 	JPanel cardLogin;
     JPanel cardMainAdmin;
@@ -33,7 +37,7 @@ class TestDB2 {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					new ConnectDB();
+					db = new ConnectDB();
 					new TestDB2();
 					
 				} catch (Exception e) {
@@ -84,6 +88,9 @@ class TestDB2 {
         cards.add(cardLogin,"login");
         cards.add(cardMainAdmin,"mainAdmin");
         cards.add(cardMainUser,"mainUser");
+        cardMainUser.setLayout(new BoxLayout(cardMainUser, BoxLayout.X_AXIS));
+        
+        
         
         
         
@@ -154,11 +161,55 @@ class TestDB2 {
 	
 	public void fillMainUserCard(JPanel cardMain)
 	{
-		frame.setBounds(100, 100, 640, 480);
-		JTextArea textArea = new JTextArea(25,25);
-	    cardMain.add(textArea);
-	    textArea.setText("User Card");
+		frame.setBounds(100, 100, 640, 240);
+	    
+	    JLabel lblDistrict = new JLabel("Περιφέρεια: ");
+	    final JComboBox<String> listDistricts = new JComboBox<String>(db.getDistricts());
+	    
+	    JLabel lblPopularity = new JLabel("Popularity: ");
+	    String[] pop = {"All","1","2","3","4","5"};
+	    final JComboBox<String> listPopularity = new JComboBox<String>(pop);
+	    
+	    JLabel lblShower = new JLabel("Ντουζιέρες: ");
+	    final JCheckBox chkShower = new JCheckBox();
+	    
+	    JLabel lblLifeguard = new JLabel("Ναυαγοσώστης: ");
+	    final JCheckBox chkLifeguard = new JCheckBox();
+	    
+	    JLabel lblEmpty = new JLabel();
+	    JButton btnSearch = new JButton("Αναζήτηση");
+	    btnSearch.addActionListener(new ActionListener() {
+	    	 
+            public void actionPerformed(ActionEvent e)
+            {
+                //Execute when button is pressed
+                db.searchBeaches(listDistricts.getSelectedItem().toString(),listPopularity.getSelectedItem().toString(),
+                		chkShower.isSelected(),chkLifeguard.isSelected());
+            }
+        });     
+	    
+	    GridLayout experimentLayout = new GridLayout(0,2,10,10);
+	    cardMain.setLayout(experimentLayout);
+	    
+	    
+	    cardMain.add(lblDistrict);
+	    cardMain.add(listDistricts);
+	    cardMain.add(lblPopularity);
+	    cardMain.add(listPopularity);
+	    
+	    cardMain.add(lblShower);
+	    cardMain.add(chkShower);
+	    cardMain.add(lblLifeguard);
+	    cardMain.add(chkLifeguard);
+	    
+	    cardMain.add(lblEmpty);
+	    cardMain.add(btnSearch);
+	    
+	    
+	    
 	}
+	
+
 
 }
 
@@ -180,7 +231,7 @@ class ConnectDB
 			conn = DriverManager.getConnection(url, userName, password);
 
 			stmt = conn.createStatement();
-			testQuery();
+			
 			
 			//conn.close();
 		} catch (Exception e) {
@@ -202,7 +253,58 @@ class ConnectDB
 			System.err.println("Got an exception! ");
 			System.err.println(e.getMessage());
 		}
+	}
 		
+	public String[] getDistricts()
+	{
+		ArrayList<String> districts = new ArrayList<String>();
+		try {
+			ResultSet rs;
+			String q = new String("SELECT DISTINCT District FROM Beach");
+			rs = stmt.executeQuery(q);
+			while (rs.next()){
+				String district = rs.getString("District");
+				districts.add(district);
+			}
+		}
+		catch(SQLException e)
+			{
+			System.err.println("Got an exception! ");
+			System.err.println(e.getMessage());
+			}
+		
+		String[] dArray = districts.toArray(new String[districts.size()]);
+		return dArray;
+	}
+	
+	public void searchBeaches(String district, String popularity, boolean shower,
+			boolean lifeguard)
+	{
+		String q = new String("SELECT * FROM Beach WHERE District='" + district+ "'");
+		if (!popularity.equals("All"))
+			q += " AND Popularity=" + popularity;
+		if (shower)
+			q += " AND Shower='True'";
+		if (lifeguard)
+			q += " AND Lifeguard='True'";
+		System.out.println(q);
+		
+		ResultSet rs;
+		try {
+			rs = stmt.executeQuery(q);
+			while (rs.next()){
+				String beach = rs.getString("Name");
+				System.out.println(beach);
+			}
+		} catch (SQLException e) {
+			System.err.println("Got an exception! ");
+			System.err.println(e.getMessage());
+		}
+		
+		
+	
 		
 	}
+	
+	
 }
