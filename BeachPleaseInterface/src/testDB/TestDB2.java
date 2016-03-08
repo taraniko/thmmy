@@ -45,8 +45,8 @@ class TestDB2 {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					db = new ConnectDB();
-					new TestDB2();
+					db = new ConnectDB(); // connect to the database
+					new TestDB2(); // initialize GUI
 					
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -345,6 +345,7 @@ class TestDB2 {
                 String res =  db.searchBeaches(listDistricts.getSelectedItem().toString(),listPopularity.getSelectedItem().toString(),
                 		chkShower.isSelected(),chkLifeguard.isSelected());
                 txtResult.setText(res);
+                frame.pack();
             }
         });     
 	    
