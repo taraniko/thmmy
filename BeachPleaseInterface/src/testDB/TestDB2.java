@@ -185,7 +185,7 @@ class TestDB2 {
                 int res = db.deleteAccommodation(listAcc.getSelectedItem().toString());
                 if (res == 0)
                 {
-                	listAcc.remove(listAcc.getSelectedIndex());
+                	//listAcc.remove(listAcc.getSelectedIndex());
                 	DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) listAcc.getModel();
                 	model.removeElementAt(listAcc.getSelectedIndex());
                 	listAcc.setModel(model);
