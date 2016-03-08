@@ -19,6 +19,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 
+
+
 import javax.swing.*;
 
 import java.awt.GridLayout;
@@ -162,10 +164,15 @@ class TestDB2 {
 	    //frame.setBounds(100, 100, 640, 640);
 		cardMain.setLayout(new GridBagLayout());
 	    final GridBagConstraints c = new GridBagConstraints();
+	    
+	    Font titleFont = new Font("Arial,",Font.BOLD,17);
+	    
+	    
 		
 		int maxCols = 30;
 	    
-	    JLabel lblDeleteAcc = new JLabel("Διαγραφή ξενοδοχείου/ενοικιαζόμενων δωματίων");
+	    JLabel lblDeleteAcc = new JLabel("Διαγραφή ξενοδοχείου/ενοικιαζόμενων δωματίων");  
+	    lblDeleteAcc.setFont(titleFont);
 	    
 	    JLabel lblAcc = new JLabel("Ονομασία επιχείρησης:");
 	    final JComboBox<String> listAcc = new JComboBox<String>(db.getAccommodations());
@@ -188,6 +195,7 @@ class TestDB2 {
         });     
 	    
 	    JLabel lblInsertAcc = new JLabel("Εισαγωγή ξενοδοχείου/ενοικιαζόμενων δωματίων");
+	    lblInsertAcc.setFont(titleFont);
 	    
 	    JLabel lblName = new JLabel("Ονομασία επιχείρησης:");
 	    final JTextField txtName = new JTextField(maxCols);
@@ -217,12 +225,13 @@ class TestDB2 {
         });     
 	    
 	    JLabel lblChangeMayor = new JLabel("Αλλαγή Δημάρχου");
+	    lblChangeMayor.setFont(titleFont);
 	    
 	    JLabel lblMunicipality = new JLabel("Δήμος:");
-	    JComboBox<String> listMunicipalities = new JComboBox<String>(db.getMunicipalities());
+	    final JComboBox<String> listMunicipalities = new JComboBox<String>(db.getMunicipalities());
 	    
 	    JLabel lblNewMayor = new JLabel("Νέος Δήμαρχος:");
-	    JTextField txtNewMayor = new JTextField(maxCols);
+	    final JTextField txtNewMayor = new JTextField(maxCols);
 	    JButton btnModify = new JButton("Αλλαγή");
 	    
 	    btnModify.addActionListener(new ActionListener() {
@@ -230,6 +239,8 @@ class TestDB2 {
             public void actionPerformed(ActionEvent e)
             {
                 //Execute when button is pressed
+            	db.setMayor(listMunicipalities.getSelectedItem().toString(), txtNewMayor.getText());
+            
             }
         });     
 	        
@@ -608,6 +619,27 @@ class ConnectDB
 	}
 	
 	
+	public void setMayor(String mun, String mayor)
+	{
+		boolean ok = true;
+		try {
+			String q = new String("Update Municipality SET Mayor='");			
+			q += mayor + "' WHERE Name='" + mun + "'";
+			stmt.executeUpdate(q);
+		}
+		catch(SQLException e)
+			{
+			//System.err.println("Got an exception! ");
+			//System.err.println(e.getMessage());
+			JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+			ok = false;
+			}
+		if (ok)
+		{
+			String result = "Ο/Η δήμαρχος του δήμου " + mun +  " έχει αλλάξει!";
+			JOptionPane.showMessageDialog(null, result, "Επιτυχία!", JOptionPane.INFORMATION_MESSAGE);
+		}
+	}
 	
 	public String searchBeaches(String district, String popularity, boolean shower,
 			boolean lifeguard)
